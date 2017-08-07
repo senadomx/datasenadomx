@@ -104,9 +104,10 @@ fetch_session <- function(legis, ano, periodo, tipo, raw_text = FALSE) {
     gsub('"|[ ]+', ' ', .) %>%
     gsub("[ ]+\\.", "\\.", .) %>%
     stringr::str_trim()
-  period <- data.frame()
-  for (h in a_href) {
-    this_vote_url <- rvest::html_session(paste0("http://www.senado.gob.mx/", h))
+  period_votes <- data.frame()
+  period_rollcalls <- data.frame()
+  for (i in 1:length(a_href)) {
+    this_vote_url <- rvest::html_session(paste0("http://www.senado.gob.mx/", a_href[i]))
     this_date <- this_vote_url %>%
       xml2::read_html() %>%
       rvest::html_nodes(".tableA.Pardo tr td div strong:first-child") %>%
@@ -121,43 +122,68 @@ fetch_session <- function(legis, ano, periodo, tipo, raw_text = FALSE) {
       .[ ,2:3] %>%
       `names<-`(c("senador", "voto")) %>%
       dplyr::mutate(voto = tolower(voto)) %>%
-      dplyr::mutate(voto = replace(voto, grepl("ausente", voto), "ausente")) %>%
+      dplyr::mutate(voto = replace(voto, grepl("ausente", voto), "ausente_oficial")) %>%
       dplyr::mutate(voto = replace(voto, grepl("abstención", voto), "abstencion")) %>%
       dplyr::mutate(voto = stringr::str_trim(voto)) %>%
       dplyr::mutate(senador = stringi::stri_trans_general(senador, "Latin-ASCII")) %>%
       dplyr::mutate(fecha = this_date) %>%
-      dplyr::select(fecha, senador, voto)
-    period <- rbind(period, this_vote)
+      dplyr::mutate(rollcall_id = paste0("L", legis, "_A", ano, "_T", tipo, "_P", periodo, "_N", i)) %>%
+      dplyr::select(rollcall_id, numero, fecha, senador, voto)
+    this_vote_count <- factor(this_vote$voto, levels = c("pro", "contra", "abstencion", "ausente_oficial")) %>%
+      table() %>%
+      as.matrix() %>%
+      t() %>%
+      data.frame() %>%
+      dplyr::mutate(texto = votes_text[i]) %>%
+      dplyr::mutate(rollcall_id = paste0("L", legis, "_A", ano, "_T", tipo, "_P", periodo, "_N", i)) %>%
+      dplyr::select(rollcall_id, numero, texto, pro, contra, abstencion)
+    period_rollcalls <- rbind(period_rollcalls, this_vote_count)
+    period_votes <- rbind(period_votes, this_vote)
   }
-  period
+  li <- list(
+    votes = period_votes,
+    rollcalls = period_rollcalls
+  )
+  class(li) <- "rollcall"
+  li
 }
 
 #' @title Extract term (legislatura)
 #' @export
-fetch_legis <- function(legisla, raw_text = FALSE) {
+fetch_legis <- function(legis, raw_text = FALSE) {
   info <- votes_info()
   inf <- info[info$legis == legis, ]
   legis_votes <- data.frame()
+  legis_rollcalls <- data.frame()
   for (i in 1:nrow(info)) {
     legis = info$legis[i]
     ano = info$ano[i]
     tipo = info$tipo[i]
     periodo = info$periodo[i]
-    legis_votes <- rbind(legis_votes, data.frame(
+    legis <- fetch_session(
       legis = legis,
       ano = ano,
       tipo = tipo,
       periodo = periodo,
-      fetch_session(
-        legis = legis,
-        ano = ano,
-        tipo = tipo,
-        periodo = periodo,
-        raw_text = raw_text
-      )
+      raw_text = raw_text
+    )
+    legis_votes <- rbind(legis_votes, data.frame(
+      ano = ano,
+      tipo = tipo,
+      periodo = periodo,
+      legis$votes
+    ))
+    legis_rollcalls <- rbind(legis_rollcalls, data.frame(
+      ano = ano,
+      tipo = tipo,
+      periodo = periodo,
+      legis$rollcalls
     ))
   }
-  legis_votes
+  list(
+    votes = legis_votes,
+    rollcalls = legis_rollcalls
+  )
 }
 
 # 1. OBTENER INFORMACION DE TODOS LOS PERIODOS DISPONIBLES ========================

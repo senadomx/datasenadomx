@@ -1,3 +1,8 @@
-#' Senado LXII Legislatura
+#' Senado LXII Legislatura Votos
 #' @docType data
-legis62
+l62votes
+
+
+#' Senado LXII Legislatura Info
+#' @docType data
+l62rollcalls

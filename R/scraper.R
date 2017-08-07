@@ -1,4 +1,4 @@
-#' @importFrom magrittr `%>%`
+#' @importFrom magrittr "%>%"
 
 #' @title Base url for votes
 base_votes_url <- function() {

@@ -1,8 +1,10 @@
 #' Senado LXII Legislatura Votos
 #' @docType data
-l62votes
+#' @name l62votes
+"l62votes"
 
 
 #' Senado LXII Legislatura Info
 #' @docType data
-l62rollcalls
+#' @name l62rollcalls
+"l62rollcalls"

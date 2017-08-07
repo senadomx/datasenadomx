@@ -8,7 +8,7 @@ Description: Utilities to fetch voting information from Mexico's Senate
 Imports: 
   rvest (>= 0.3.0),
   stringi (>= 1.1.2),
-  stringr (>= 1.2.0)
+  stringr (>= 1.2.0),
   dplyr (>= 0.5.0),
   tidyr (>= 0.6.2)
 License: MIT

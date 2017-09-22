@@ -6,4 +6,3 @@
 \usage{
 votes_info()
 }
-

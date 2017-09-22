@@ -6,4 +6,3 @@
 \usage{
 extract_short_date(text_date)
 }
-

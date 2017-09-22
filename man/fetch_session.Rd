@@ -4,6 +4,5 @@
 \alias{fetch_session}
 \title{download a period}
 \usage{
-fetch_session(legis, ano, periodo, tipo, raw_text = FALSE)
+fetch_session(legis, ano, periodo, tipo, raw = FALSE)
 }
-

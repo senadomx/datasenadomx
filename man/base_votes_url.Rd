@@ -6,4 +6,3 @@
 \usage{
 base_votes_url()
 }
-

@@ -6,4 +6,3 @@
 \usage{
 votes_url(legis, ano, periodo, tipo)
 }
-

@@ -83,7 +83,7 @@ votes_url <- function(legis, ano, periodo, tipo) {
 
 #' @title download a period
 #' @export
-fetch_session <- function(legis, ano, periodo, tipo, raw_text = FALSE) {
+fetch_session <- function(legis, ano, periodo, tipo, raw = FALSE) {
   link <- votes_url(legis, ano, periodo, tipo)
   sess <- link %>%
     rvest::html_session()
@@ -94,7 +94,7 @@ fetch_session <- function(legis, ano, periodo, tipo, raw_text = FALSE) {
   a_text <- a %>%
     rvest::html_text()
   votes_text <- a_text
-  if (!raw_text) {
+  if (!raw) {
     votes_text <- votes_text %>%
       stringi::stri_trans_general("Latin-ASCII") %>%
       tolower()
@@ -128,15 +128,16 @@ fetch_session <- function(legis, ano, periodo, tipo, raw_text = FALSE) {
       dplyr::mutate(senador = stringi::stri_trans_general(senador, "Latin-ASCII")) %>%
       dplyr::mutate(fecha = this_date) %>%
       dplyr::mutate(rollcall_id = paste0("L", legis, "_A", ano, "_T", tipo, "_P", periodo, "_N", i)) %>%
-      dplyr::select(rollcall_id, numero, fecha, senador, voto)
+      dplyr::select(rollcall_id, fecha, senador, voto)
     this_vote_count <- factor(this_vote$voto, levels = c("pro", "contra", "abstencion", "ausente_oficial")) %>%
       table() %>%
       as.matrix() %>%
       t() %>%
       data.frame() %>%
       dplyr::mutate(texto = votes_text[i]) %>%
+      dplyr::mutate(fecha = this_date) %>%
       dplyr::mutate(rollcall_id = paste0("L", legis, "_A", ano, "_T", tipo, "_P", periodo, "_N", i)) %>%
-      dplyr::select(rollcall_id, numero, texto, pro, contra, abstencion)
+      dplyr::select(rollcall_id, fecha, texto, pro, contra, abstencion)
     period_rollcalls <- rbind(period_rollcalls, this_vote_count)
     period_votes <- rbind(period_votes, this_vote)
   }
@@ -150,9 +151,9 @@ fetch_session <- function(legis, ano, periodo, tipo, raw_text = FALSE) {
 
 #' @title Extract term (legislatura)
 #' @export
-fetch_legis <- function(legis, raw_text = FALSE) {
+fetch_legis <- function(legis, raw = FALSE) {
   info <- votes_info()
-  inf <- info[info$legis == legis, ]
+  info <- info[info$legis == legis, ]
   legis_votes <- data.frame()
   legis_rollcalls <- data.frame()
   for (i in 1:nrow(info)) {
@@ -165,7 +166,7 @@ fetch_legis <- function(legis, raw_text = FALSE) {
       ano = ano,
       tipo = tipo,
       periodo = periodo,
-      raw_text = raw_text
+      raw = raw
     )
     legis_votes <- rbind(legis_votes, data.frame(
       ano = ano,

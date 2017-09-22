@@ -4,7 +4,11 @@
 \name{l62rollcalls}
 \alias{l62rollcalls}
 \title{Senado LXII Legislatura Info}
+\format{An object of class \code{data.frame} with 837 rows and 9 columns.}
+\usage{
+l62rollcalls
+}
 \description{
 Senado LXII Legislatura Info
 }
-
+\keyword{datasets}

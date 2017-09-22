@@ -4,6 +4,5 @@
 \alias{fetch_legis}
 \title{Extract term (legislatura)}
 \usage{
-fetch_legis(legis, raw_text = FALSE)
+fetch_legis(legis, raw = FALSE)
 }
-

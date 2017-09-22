@@ -4,7 +4,11 @@
 \name{l62votes}
 \alias{l62votes}
 \title{Senado LXII Legislatura Votos}
+\format{An object of class \code{data.frame} with 82857 rows and 7 columns.}
+\usage{
+l62votes
+}
 \description{
 Senado LXII Legislatura Votos
 }
-
+\keyword{datasets}

@@ -37,33 +37,14 @@ votes_info <- function() {
     rvest::html_text()
   links_href <- links %>%
     rvest::html_attr("href")
-  lg <- links_href %>%
-    stringr::str_extract_all("lg=([^=&]*)") %>%
-    unlist() %>%
-    stringr::str_replace("lg=", "")
-  tp <- links_href %>%
-    stringr::str_extract_all("tp=([^=&]*)") %>%
-    unlist() %>%
-    stringr::str_replace("tp=", "")
-  np <- links_href %>%
-    stringr::str_extract_all("np=([^=&]*)") %>%
-    unlist() %>%
-    stringr::str_replace("np=", "")
-  ano <- links_href %>%
-    stringr::str_extract_all("ano=([^=&]*)") %>%
-    unlist() %>%
-    stringr::str_replace("ano=", "")
-  num <- integer(0)
-  for (l in unique(lg)) {
-    for (a in unique(ano[lg == l])) {
-      num <- c(num, 1:(sum(lg == l & ano == a)))
-    }
-  }
-  id <- sprintf("L%s_A%s_N%s_P%s%s", lg, ano, num, tp, np)
+  lg <- stringr::str_match(links_href, "lg=([^=&]*)")[ ,2]
+  tp <- stringr::str_match(links_href, "tp=([^=&]*)")[ ,2]
+  np <- stringr::str_match(links_href, "np=([^=&]*)")[ ,2]
+  ano <- stringr::str_match(links_href, "ano=([^=&]*)")[ ,2]
+  id <- sprintf("L%s_A%s_N%s_P%s%s", lg, ano, tp, np)
   data.frame(
     legis = lg,
     ano = ano,
-    numero = num,
     tipo = tp,
     periodo = np,
     # id = id,
@@ -75,9 +56,11 @@ votes_info <- function() {
 
 #' @title voting URL
 votes_url <- function(legis, ano, periodo, tipo) {
-  fields <- paste0(c("sm", "ano", "tp", "np", "lg"),
-                   "=",
-                   c(1, ano, tipo, periodo, legis))
+  fields <- paste0(
+    c("sm", "ano", "tp", "np", "lg"),
+    c(1, ano, tipo, periodo, legis),
+    sep = "="
+  )
   paste(c(base_votes_url(), fields), collapse = "&")
 }
 

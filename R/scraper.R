@@ -1,62 +1,127 @@
 #' @importFrom magrittr "%>%"
 
-#' @title Base url for votes
-base_votes_url <- function() {
-  # watch=36 is the site's link for votes
-  "http://www.senado.gob.mx/index.php?watch=36"
-}
-
-#' @title Extract Date from Text
-extract_short_date <- function(text_date) {
-  text_date %>%
-    stringi::stri_trans_general("Latin-ASCII") %>%
-    toupper() %>%
-    gsub("ENERO", "01", .) %>%
-    gsub("FEBRERO", "02", .) %>%
-    gsub("MARZO", "03", .) %>%
-    gsub("ABRIL", "04", .) %>%
-    gsub("MAYO", "05", .) %>%
-    gsub("JUNIO", "06", .) %>%
-    gsub("JULIO", "07", .) %>%
-    gsub("AGOSTO", "08", .) %>%
-    gsub("SEPTIEMBRE", "09", .) %>%
-    gsub("OCTUBRE", "10", .) %>%
-    gsub("NOVIEMBRE", "11", .) %>%
-    gsub("DICIEMBRE", "12", .) %>%
-    gsub("[A-Z]|[ ]+", "" , .) %>%
-    as.Date(format = "%d%m%Y")
-}
-
-
-#' @title Will download the data as csv into the specified destination
-votes_info <- function() {
-  links <- base_votes_url() %>%
-    xml2::read_html() %>%
-    rvest::html_nodes(".tableA ul li a")
-  links_text <- links %>%
-    rvest::html_text()
-  links_href <- links %>%
-    rvest::html_attr("href")
-  lg <- stringr::str_match(links_href, "lg=([^=&]*)")[ ,2]
-  tp <- stringr::str_match(links_href, "tp=([^=&]*)")[ ,2]
-  np <- stringr::str_match(links_href, "np=([^=&]*)")[ ,2]
-  ano <- stringr::str_match(links_href, "ano=([^=&]*)")[ ,2]
-  id <- sprintf("L%s_A%s_N%s_P%s%s", lg, ano, tp, np)
-  data.frame(
-    legis = lg,
-    ano = ano,
-    tipo = tp,
-    periodo = np,
-    # id = id,
-    texto = links_text,
-    href = links_href,
-    stringsAsFactors = FALSE
+# Webpage codes
+base_url <- function(type) {
+  switch(type,
+    "prefix" = "http://www.senado.gob.mx/",
+    "votes" = "http://www.senado.gob.mx/index.php?watch=36",
+    "attendance" = "http://www.senado.gob.mx/index.php?watch=35",
+    "senadores" = "http://www.senado.gob.mx/index.php?watch=8",
+    stop("wrong type for base_url")
   )
 }
 
+# Parse spanish text data into date format (e.g., jueves 23 de marzo de 2015)
+parse_date <- function(text_date) {
+  # constant for months in spanish
+  spanish_months <- c("enero", "febrero", "marzo", "abril",
+                      "mayo", "junio", "julio", "agosto",
+                      "septiembre", "octubre", "noviembre", "diciembre")
+  # parse text into data object
+  text_date %>%
+    stringi::stri_trans_general("Latin-ASCII") %>%
+    tolower() %>%
+    stringr::str_replace_all(setNames(sprintf("%02d", 1:12), spanish_months)) %>%
+    stringr::str_replace_all("[a-z]|[ ]+", "") %>%
+    as.Date(format = "%d%m%Y")
+}
+
+#' @title Voting information
+#' @description Creates a data.frame with information about available voting information and web source.
+#' @details The selected names for the output variables are chosen in accordance with the html codes of the web source.
+#' @return A data.frame with the following information
+#' \itemize{
+#'  \item{\code{ano}}{ Year within term e.g., 'primer ano de ejercicio'}
+#'  \item{\code{tp}}{  Type of session 'ordinario or extraodinario'}
+#'  \item{\code{np}}{  Period within year e.g., 'segundo periodo'}
+#'  \item{\code{lg}}{  Legislature e.g., XVIII}
+#'  \item{\code{id}}{  Compact id including the previous variables}
+#'  \item{\code{description}}{ Original spanish description from web source}
+#'  \item{\code{link}}{ Link to the web source}
+#' }
+#' @export
+voting_info <- function() {
+  message("Finding all available periods")
+  period <- base_url("votes") %>%
+    xml2::read_html() %>%
+    rvest::html_nodes(".tableA ul li a")
+  period_description <- period %>%
+    rvest::html_text()
+  period_link <- period %>%
+    rvest::html_attr("href")
+  lg <- stringr::str_match(period_link, "lg=([^=&]*)")[ ,2]
+  tp <- stringr::str_match(period_link, "tp=([^=&]*)")[ ,2]
+  np <- stringr::str_match(period_link, "np=([^=&]*)")[ ,2]
+  ano <- stringr::str_match(period_link, "ano=([^=&]*)")[ ,2]
+  message("Fetching info of each period")
+  pb <- progress::progress_bar$new(total = length(period_link))
+  pb$tick(0)
+  result <- purrr::map(1:length(period_link), function(i) {
+    this_html <- paste0(base_url("prefix"), period_link[i]) %>%
+      rvest::html_session()
+    tmp_txt <- this_html %>%
+      xml2::read_html() %>%
+      rvest::html_nodes(".tableA.Pardo tr th") %>%
+      rvest::html_text()
+    tmp_date <- this_html %>%
+      xml2::read_html() %>%
+      rvest::html_nodes(".tableA.Pardo tr th div") %>%
+      rvest::html_text() %>%
+      parse_date()
+    this_date <- as.Date(as.character( ))
+    k <- 1
+    for (l in 2:length(tmp_txt)) {
+      if (grepl("Resultado", tmp_txt[l])) {
+        this_date <- c(this_date, tmp_date[k])
+      } else {
+        k <-  k + 1
+      }
+    }
+    this_description <- this_html %>%
+      rvest::html_nodes(".tableA.Pardo tr td div a") %>%
+      rvest::html_text() %>%
+      stringi::stri_trans_general("Latin-ASCII") %>%
+      tolower()
+    this_link <- this_html %>%
+      rvest::html_nodes(".tableA.Pardo tr td div a") %>%
+      rvest::html_attr("href")
+    this_vote <- this_html %>%
+      rvest::html_nodes(".tableV") %>%
+      rvest::html_table() %>%
+      purrr::map(. %>% .[ ,2]) %>%
+      purrr::reduce(rbind) %>%
+      `rownames<-`(NULL) %>%
+      data.frame() %>%
+      `names<-`(c("Yea", "Nay", "Abstain"))
+    pb$tick()
+    id <- paste(lg[i], ano[i], np[i], tp[i], sprintf("%02d", 1:length(this_date)), sep = "-")
+    data.frame(
+      ano = ano[i],
+      tp = tp[i],
+      np = np[i],
+      lg = lg[i],
+      date = this_date,
+      id = id,
+      description = this_description,
+      link = this_link,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  # row bind list
+  result  <- purrr::reduce(result, rbind)
+
+  # output
+  result
+}
+
+
+
+
+
 #' @title voting URL
 votes_url <- function(legis, ano, periodo, tipo) {
-  fields <- paste0(
+  fields <- paste(
     c("sm", "ano", "tp", "np", "lg"),
     c(1, ano, tipo, periodo, legis),
     sep = "="

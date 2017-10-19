@@ -54,8 +54,7 @@ voting_info <- function() {
   np <- stringr::str_match(period_link, "np=([^=&]*)")[ ,2]
   ano <- stringr::str_match(period_link, "ano=([^=&]*)")[ ,2]
   message("Fetching info of each period")
-  pb <- progress::progress_bar$new(total = length(period_link))
-  pb$tick(0)
+  pb <- progress::progress_bar$new(total = length(period_link), clear = FALSE)
   result <- purrr::map(1:length(period_link), function(i) {
     this_html <- paste0(base_url("prefix"), period_link[i]) %>%
       rvest::html_session()
@@ -94,7 +93,7 @@ voting_info <- function() {
       data.frame() %>%
       `names<-`(c("Yea", "Nay", "Abstain"))
     pb$tick()
-    id <- paste(lg[i], ano[i], np[i], tp[i], sprintf("%02d", 1:length(this_date)), sep = "-")
+    id <- paste(lg[i], ano[i], np[i], tp[i], sprintf("%002d", 1:length(this_date)), sep = "-")
     data.frame(
       ano = ano[i],
       tp = tp[i],
